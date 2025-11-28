@@ -1,14 +1,3 @@
-✅ Final GitHub-Friendly README (Paste This Exactly)
-✔️ PERFECT formatting
-✔️ Clean headings
-✔️ Proper code blocks
-✔️ Works in GitHub Preview immediately
-# Code2Flow
-
-Transform your code into beautiful flowcharts using Tree-sitter + LLM + Mermaid.
-
----
-
 ## 🚀 Overview
 
 Code2Flow converts raw source code into clean, readable **Mermaid flowcharts**, combining:
