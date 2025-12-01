@@ -116,7 +116,7 @@ st.markdown("""
         font-weight: bold;
         color: #2563eb;
         text-align: center;
-        margin-top: -1rem;
+        margin-top: -0.3rem;
         margin-bottom: 0.2rem;
         padding-top: 0;
     }
