@@ -203,17 +203,37 @@ async def read_uploaded_file(file: UploadFile = File(...)):
     try:
         # Check file extension
         allowed_extensions = ['.py', '.js', '.c', '.txt', '.ts']
-        file_ext = Path(file.filename).suffix.lower()
+        file_ext = '.' + file.filename.split('.')[-1].lower()
         
         if file_ext not in allowed_extensions:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+                }
             )
         
         # Read file content
         content = await file.read()
-        code_text = content.decode('utf-8')
+        
+        # Try to decode with multiple encodings
+        code_text = None
+        for encoding in ['utf-8', 'latin-1', 'cp1252']:
+            try:
+                code_text = content.decode(encoding)
+                break
+            except:
+                continue
+        
+        if code_text is None:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "File encoding not supported"
+                }
+            )
         
         return {
             "success": True,
@@ -223,10 +243,14 @@ async def read_uploaded_file(file: UploadFile = File(...)):
             "lines": len(code_text.splitlines())
         }
     
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File encoding not supported. Use UTF-8.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"Error reading file: {str(e)}"
+            }
+        )
 # ============================================
 # NEW SEPARATE ENDPOINTS
 # ============================================
