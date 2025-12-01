@@ -279,8 +279,7 @@ if uploaded_file is not None:
         clear_btn = st.button(
             "🗑️ Clear All"
         )
-    
-  if clear_btn:
+    if clear_btn:
     st.session_state.session_id = None
     st.session_state.flowchart_generated = False
     st.session_state.svg_url = None
