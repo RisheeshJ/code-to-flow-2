@@ -194,6 +194,39 @@ async def health_check():
         "active_sessions": len(code_storage)
     }
 
+@app.post("/read-file")
+async def read_uploaded_file(file: UploadFile = File(...)):
+    """
+    Read code from uploaded file and return as text
+    Supports: .py, .js, .c, .txt, .ts
+    """
+    try:
+        # Check file extension
+        allowed_extensions = ['.py', '.js', '.c', '.txt', '.ts']
+        file_ext = Path(file.filename).suffix.lower()
+        
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+            )
+        
+        # Read file content
+        content = await file.read()
+        code_text = content.decode('utf-8')
+        
+        return {
+            "success": True,
+            "code": code_text,
+            "filename": file.filename,
+            "size": len(code_text),
+            "lines": len(code_text.splitlines())
+        }
+    
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File encoding not supported. Use UTF-8.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
 # ============================================
 # NEW SEPARATE ENDPOINTS
 # ============================================
