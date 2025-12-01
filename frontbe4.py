@@ -7,7 +7,10 @@ from datetime import datetime
 # ============================================
 # CONFIGURATION
 # ============================================
-API_BASE_URL = "http://localhost:8000"
+import os
+
+# Configuration - works both locally and on Render
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 
 # ============================================
 # SESSION STATE INITIALIZATION
