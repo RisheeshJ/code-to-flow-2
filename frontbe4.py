@@ -206,7 +206,10 @@ with col1:
     )
     
     # Determine code to display
+    default_code = st.session_state.get('example_code', """def hello_world():
+    print("Hello, World!")
     
+hello_world()""")
     
     # If file is uploaded, read its content
     if uploaded_file is not None:
