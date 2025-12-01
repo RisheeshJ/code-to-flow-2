@@ -206,10 +206,7 @@ with col1:
     )
     
     # Determine code to display
-    default_code = st.session_state.get('example_code', """def hello_world():
-    print("Hello, World!")
     
-hello_world()""")
     
     # If file is uploaded, read its content
     if uploaded_file is not None:
@@ -385,9 +382,9 @@ with col2:
         st.markdown("---")
         st.markdown("### ✨ Features")
         st.markdown("""
-        - 📁 **File Upload Support** - Upload .py, .js, .c, .txt files
+        - 📁 **File Upload Support** - Upload .py, .js, .c, .txt,.ts files
         - 🔍 **Smart Code Analysis** - Detects functions, loops, and conditionals
-        - 🎯 **Multi-Language Support** - Python, JavaScript, C, and more
+        - 🎯 **Multi-Language Support** - Python, JavaScript, C.
         - 🧩 **Complexity Detection** - Analyzes code complexity
         - 📊 **Visual Flowcharts** - Beautiful Mermaid diagrams
         - 🚀 **Fast Processing** - Powered by LLM + Tree-sitter
