@@ -2,16 +2,10 @@
 headless = true
 port = 8501
 address = "0.0.0.0"
-
-[browser]
-gatherUsageStats = false
-serverAddress = "0.0.0.0"
-serverPort = 8501
-
-[server]
-headless = true
 enableCORS = false
 enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
+serverAddress = "0.0.0.0"
+serverPort = 8501
