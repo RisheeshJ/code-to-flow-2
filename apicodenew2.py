@@ -194,63 +194,7 @@ async def health_check():
         "active_sessions": len(code_storage)
     }
 
-@app.post("/read-file")
-async def read_uploaded_file(file: UploadFile = File(...)):
-    """
-    Read code from uploaded file and return as text
-    Supports: .py, .js, .c, .txt, .ts
-    """
-    try:
-        # Check file extension
-        allowed_extensions = ['.py', '.js', '.c', '.txt', '.ts']
-        file_ext = '.' + file.filename.split('.')[-1].lower()
-        
-        if file_ext not in allowed_extensions:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
-                }
-            )
-        
-        # Read file content
-        content = await file.read()
-        
-        # Try to decode with multiple encodings
-        code_text = None
-        for encoding in ['utf-8', 'latin-1', 'cp1252']:
-            try:
-                code_text = content.decode(encoding)
-                break
-            except:
-                continue
-        
-        if code_text is None:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "File encoding not supported"
-                }
-            )
-        
-        return {
-            "success": True,
-            "code": code_text,
-            "filename": file.filename,
-            "size": len(code_text),
-            "lines": len(code_text.splitlines())
-        }
-    
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": f"Error reading file: {str(e)}"
-            }
-        )
+
 # ============================================
 # NEW SEPARATE ENDPOINTS
 # ============================================
