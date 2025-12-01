@@ -27,9 +27,6 @@ if 'analysis' not in st.session_state:
     st.session_state.analysis = None
 if 'status' not in st.session_state:
     st.session_state.status = None
-# FIX 1: Add file content state
-if 'uploaded_file_content' not in st.session_state:
-    st.session_state.uploaded_file_content = None
 
 # ============================================
 # API FUNCTIONS
@@ -205,26 +202,21 @@ with col1:
     uploaded_file = st.file_uploader(
         "Upload a code file",
         type=['py', 'js', 'c', 'txt', 'ts'],
-        help="Upload a Python, JavaScript, C, or text file containing your code"
+        help="Upload a Python, JavaScript, C, or text file containing your code",
+        key="file_uploader"
     )
     
-    # FIX 1: Handle file upload and store in session state
+    # Determine code to display
+    code_to_display = ""
+    
+    # If file is uploaded, read its content
     if uploaded_file is not None:
         try:
-            # Read file content
             file_content = uploaded_file.read().decode('utf-8')
-            # Store in session state to persist
-            st.session_state.uploaded_file_content = file_content
             st.success(f"✅ File '{uploaded_file.name}' loaded successfully!")
+            code_to_display = file_content
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
-            st.session_state.uploaded_file_content = None
-    
-    # FIX 3: Determine code to display - use uploaded file if available, otherwise empty string
-    if st.session_state.uploaded_file_content:
-        code_to_display = st.session_state.uploaded_file_content
-    else:
-        code_to_display = ""
     
     # Code input
     code_input = st.text_area(
@@ -266,7 +258,6 @@ with col1:
         st.session_state.mermaid_code = None
         st.session_state.analysis = None
         st.session_state.status = None
-        st.session_state.uploaded_file_content = None  # Clear uploaded file
         if 'example_code' in st.session_state:
             del st.session_state.example_code
         st.rerun()
@@ -329,10 +320,9 @@ with col2:
             with col_action1:
                 st.link_button("🌐 Open in Browser", st.session_state.svg_url)
             
-            # FIX 2: Use download button instead of copy button
             with col_action2:
                 st.download_button(
-                    label="📋 Copy URL",
+                    label="📋 Download URL",
                     data=st.session_state.svg_url,
                     file_name="flowchart_url.txt",
                     mime="text/plain"
