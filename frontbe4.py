@@ -27,6 +27,8 @@ if 'analysis' not in st.session_state:
     st.session_state.analysis = None
 if 'status' not in st.session_state:
     st.session_state.status = None
+if 'last_uploaded_file' not in st.session_state:
+    st.session_state.last_uploaded_file = None
 
 # ============================================
 # API FUNCTIONS
@@ -81,19 +83,7 @@ def check_api_health():
     except:
         return False
 
-def read_file_from_api(uploaded_file):
-    """Send file to API and get code text back"""
-    try:
-        files = {'file': (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-        response = requests.post(
-            f"{API_BASE_URL}/read-file",
-            files=files
-        )
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        st.error(f"❌ Error reading file via API: {str(e)}")
-        return None
+
 def get_logs():
     """Get all saved logs"""
     try:
@@ -218,8 +208,7 @@ with col1:
     uploaded_file = st.file_uploader(
         "Upload a code file",
         type=['py', 'js', 'c', 'txt', 'ts'],
-        help="Upload a Python, JavaScript, C, or text file containing your code",
-        key="file_uploader"
+        help="Upload a Python, JavaScript, C, or text file containing your code"
     )
     
     # Initialize session state for code
@@ -227,14 +216,32 @@ with col1:
         st.session_state.current_code = ""
     
     # If file is uploaded, send to API to read
-    if uploaded_file is not None:
-        with st.spinner(f"📖 Reading {uploaded_file.name}..."):
-            result = read_file_from_api(uploaded_file)
-            if result and result.get('success'):
-                st.session_state.current_code = result['code']
-                st.success(f"✅ Loaded {result['lines']} lines from '{result['filename']}'")
-            else:
-                st.error("❌ Failed to read file")
+  # If file is uploaded, read it directly in Streamlit
+if uploaded_file is not None:
+    try:
+        # Read file content directly
+        bytes_data = uploaded_file.getvalue()
+        code_text = bytes_data.decode('utf-8')
+        
+        # Only update if it's a different file
+        file_id = f"{uploaded_file.name}_{len(code_text)}"
+        if st.session_state.get('last_uploaded_file') != file_id:
+            st.session_state.current_code = code_text
+            st.session_state.last_uploaded_file = file_id
+            st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
+    except UnicodeDecodeError:
+        # Try different encodings if UTF-8 fails
+        try:
+            code_text = bytes_data.decode('latin-1')
+            file_id = f"{uploaded_file.name}_{len(code_text)}"
+            if st.session_state.get('last_uploaded_file') != file_id:
+                st.session_state.current_code = code_text
+                st.session_state.last_uploaded_file = file_id
+                st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
+        except Exception as e:
+            st.error(f"❌ Error reading file: {str(e)}")
+    except Exception as e:
+        st.error(f"❌ Error reading file: {str(e)}")
     
     # Code input
     code_input = st.text_area(
@@ -273,17 +280,18 @@ with col1:
             "🗑️ Clear All"
         )
     
-    if clear_btn:
-        st.session_state.session_id = None
-        st.session_state.flowchart_generated = False
-        st.session_state.svg_url = None
-        st.session_state.mermaid_code = None
-        st.session_state.analysis = None
-        st.session_state.status = None
-        st.session_state.current_code = ""
-        if 'example_code' in st.session_state:
-            del st.session_state.example_code
-        st.rerun()
+  if clear_btn:
+    st.session_state.session_id = None
+    st.session_state.flowchart_generated = False
+    st.session_state.svg_url = None
+    st.session_state.mermaid_code = None
+    st.session_state.analysis = None
+    st.session_state.status = None
+    st.session_state.current_code = ""
+    st.session_state.last_uploaded_file = None
+    if 'example_code' in st.session_state:
+        del st.session_state.example_code
+    st.rerun()
     
     # Processing logic
     if generate_btn:
