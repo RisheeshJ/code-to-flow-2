@@ -198,30 +198,29 @@ with col1:
     st.markdown("### 📝 Code Input")
     
     # File upload section
+    # File upload section
     st.markdown("**Paste your code here or upload your code file:**")
     uploaded_file = st.file_uploader(
         "Upload a code file",
         type=['py', 'js', 'c', 'txt', 'ts'],
-        help="Upload a Python, JavaScript, C, or text file containing your code",
+        help="Upload a Python, JavaScript, C,ts, or text file containing your code",
         key="file_uploader"
     )
     
-    # Determine code to display
-    code_to_display = ""
-    
-    # If file is uploaded, read its content
+    # If file is uploaded, read and paste into text area
     if uploaded_file is not None:
         try:
             file_content = uploaded_file.read().decode('utf-8')
+            st.session_state.uploaded_code = file_content
             st.success(f"✅ File '{uploaded_file.name}' loaded successfully!")
-            code_to_display = file_content
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
+            st.session_state.uploaded_code = ""
     
     # Code input
     code_input = st.text_area(
         "Or paste your code directly:",
-        value=code_to_display,
+        value=st.session_state.get('uploaded_code', ''),
         height=400,
         placeholder="Enter your code here...",
         key="code_area"
@@ -260,6 +259,8 @@ with col1:
         st.session_state.status = None
         if 'example_code' in st.session_state:
             del st.session_state.example_code
+        if 'uploaded_code' in st.session_state:
+            del st.session_state.uploaded_code
         st.rerun()
     
     # Processing logic
