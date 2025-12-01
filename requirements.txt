@@ -4,8 +4,10 @@ streamlit
 requests
 tree-sitter
 python-dotenv
+python-multipart
 langchain-groq
 groq
+tree-sitter
 tree_sitter_python
 tree_sitter_javascript
 tree_sitter_c
