@@ -320,9 +320,7 @@ with col2:
             col_action1, col_action2 = st.columns(2)
             
             with col_action1:
-                if st.button("🌐 Open in Browser"):
-                    webbrowser.open(st.session_state.svg_url)
-                    st.success("✅ Opened in browser!")
+                st.link_button("🌐 Open in Browser", st.session_state.svg_url)
             
             with col_action2:
                 if st.button("📋 Copy URL"):
