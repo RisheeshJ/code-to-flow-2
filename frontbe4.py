@@ -80,6 +80,20 @@ def check_api_health():
         return response.status_code == 200
     except:
         return False
+
+def read_file_from_api(uploaded_file):
+    """Send file to API and get code text back"""
+    try:
+        files = {'file': (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+        response = requests.post(
+            f"{API_BASE_URL}/read-file",
+            files=files
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        st.error(f"❌ Error reading file via API: {str(e)}")
+        return None
 def get_logs():
     """Get all saved logs"""
     try:
@@ -199,32 +213,41 @@ with col1:
     
     # File upload section
     # File upload section
+# File upload section
     st.markdown("**Paste your code here or upload your code file:**")
     uploaded_file = st.file_uploader(
         "Upload a code file",
         type=['py', 'js', 'c', 'txt', 'ts'],
-        help="Upload a Python, JavaScript, C,ts, or text file containing your code",
+        help="Upload a Python, JavaScript, C, or text file containing your code",
         key="file_uploader"
     )
     
-    # If file is uploaded, read and paste into text area
+    # Initialize session state for code
+    if 'current_code' not in st.session_state:
+        st.session_state.current_code = ""
+    
+    # If file is uploaded, send to API to read
     if uploaded_file is not None:
-        try:
-            file_content = uploaded_file.read().decode('utf-8')
-            st.session_state.uploaded_code = file_content
-            st.success(f"✅ File '{uploaded_file.name}' loaded successfully!")
-        except Exception as e:
-            st.error(f"❌ Error reading file: {str(e)}")
-            st.session_state.uploaded_code = ""
+        with st.spinner(f"📖 Reading {uploaded_file.name}..."):
+            result = read_file_from_api(uploaded_file)
+            if result and result.get('success'):
+                st.session_state.current_code = result['code']
+                st.success(f"✅ Loaded {result['lines']} lines from '{result['filename']}'")
+            else:
+                st.error("❌ Failed to read file")
     
     # Code input
     code_input = st.text_area(
         "Or paste your code directly:",
-        value=st.session_state.get('uploaded_code', ''),
+        value=st.session_state.current_code,
         height=400,
         placeholder="Enter your code here...",
         key="code_area"
     )
+    
+    # Update session state when user types
+    if code_input != st.session_state.current_code:
+        st.session_state.current_code = code_input
     
     # Language selection
     language = st.selectbox(
@@ -257,10 +280,9 @@ with col1:
         st.session_state.mermaid_code = None
         st.session_state.analysis = None
         st.session_state.status = None
+        st.session_state.current_code = ""
         if 'example_code' in st.session_state:
             del st.session_state.example_code
-        if 'uploaded_code' in st.session_state:
-            del st.session_state.uploaded_code
         st.rerun()
     
     # Processing logic
