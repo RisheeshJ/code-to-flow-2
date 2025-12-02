@@ -29,6 +29,8 @@ if 'status' not in st.session_state:
     st.session_state.status = None
 if 'last_uploaded_file' not in st.session_state:
     st.session_state.last_uploaded_file = None
+if 'current_code' not in st.session_state:
+    st.session_state.current_code = ""
 
 # ============================================
 # API FUNCTIONS
@@ -198,53 +200,49 @@ with st.sidebar:
 col1, col2 = st.columns([1, 1])
 
 # Left column - Input
-# Left column - Input
 with col1:
     st.markdown("### 📝 Code Input")
     
-    st.markdown("**Paste your code here or upload your code file:**")
+    # FILE UPLOAD - Completely independent
+    st.markdown("**Upload a code file:**")
     uploaded_file = st.file_uploader(
-        "Upload a code file",
+        "Choose a file",
         type=['py', 'js', 'c', 'txt', 'ts'],
-        help="Upload a Python, JavaScript, C, or text file containing your code"
+        help="Upload a Python, JavaScript, C, TypeScript, or text file containing your code",
+        key="file_uploader"
     )
     
-    # Initialize session state for code
-    if 'current_code' not in st.session_state:
-        st.session_state.current_code = ""
-    
-    # If file is uploaded, read it directly and update current_code
+    # Handle file upload independently
     if uploaded_file is not None:
         try:
             bytes_data = uploaded_file.getvalue()
-            code_text = bytes_data.decode('utf-8')
-        except UnicodeDecodeError:
+            # Try UTF-8 first, fallback to latin-1
             try:
-                code_text = bytes_data.decode('latin-1')
-            except Exception as e:
-                st.error(f"❌ Error reading file: {str(e)}")
-                code_text = None
+                code_from_file = bytes_data.decode('utf-8')
+            except UnicodeDecodeError:
+                code_from_file = bytes_data.decode('latin-1')
+            
+            # Check if this is a new file (different from last uploaded)
+            file_id = f"{uploaded_file.name}_{len(code_from_file)}"
+            if st.session_state.get('last_uploaded_file') != file_id:
+                st.session_state.current_code = code_from_file
+                st.session_state.last_uploaded_file = file_id
+                st.success(f"✅ Loaded {len(code_from_file.splitlines())} lines from '{uploaded_file.name}'")
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
-            code_text = None
-
-        if code_text is not None:
-            file_id = f"{uploaded_file.name}_{len(code_text)}"
-            if st.session_state.get('last_uploaded_file') != file_id:
-                st.session_state.current_code = code_text
-                st.session_state.last_uploaded_file = file_id
-                st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
     
-    # --- Always show the code text area and controls (whether a file was uploaded or not) ---
+    # CODE TEXT AREA - Always visible, completely independent
+    st.markdown("**Or paste your code directly:**")
     code_input = st.text_area(
-        "Or paste your code directly:",
+        "Code Editor",
         value=st.session_state.current_code,
         height=400,
         placeholder="Enter your code here...",
-        key="code_area"
+        key="code_area",
+        label_visibility="collapsed"
     )
     
-    # Update session state when user types
+    # Update session state only when text area changes
     if code_input != st.session_state.current_code:
         st.session_state.current_code = code_input
     
@@ -264,7 +262,7 @@ with col1:
     with col_btn2:
         clear_btn = st.button("🗑️ Clear All")
     
-    # Clear action (works whether a file was uploaded or not)
+    # Clear action
     if clear_btn:
         st.session_state.session_id = None
         st.session_state.flowchart_generated = False
@@ -280,6 +278,7 @@ with col1:
     
     # Processing logic for Generate button
     if generate_btn:
+        # Use whatever code is currently in session state (from file OR manual input)
         if not st.session_state.current_code.strip():
             st.error("❌ Please enter some code or upload a file!")
         else:
@@ -396,9 +395,9 @@ with col2:
         st.markdown("---")
         st.markdown("### ✨ Features")
         st.markdown("""
-        - 📁 **File Upload Support** - Upload .py, .js, .c, .txt,.ts files
+        - 📁 **File Upload Support** - Upload .py, .js, .c, .txt, .ts files
         - 🔍 **Smart Code Analysis** - Detects functions, loops, and conditionals
-        - 🎯 **Multi-Language Support** - Python, JavaScript, C.
+        - 🎯 **Multi-Language Support** - Python, JavaScript, C
         - 🧩 **Complexity Detection** - Analyzes code complexity
         - 📊 **Visual Flowcharts** - Beautiful Mermaid diagrams
         - 🚀 **Fast Processing** - Powered by LLM + Tree-sitter
@@ -412,7 +411,7 @@ if st.session_state.get('show_logs', False):
     logs_data = get_logs()
     if logs_data and logs_data.get('logs'):
         for i, log in enumerate(logs_data['logs']):
-            with st.expander(f"🕒 {log['timestamp']} - {log['language']}"):
+            with st.expander(f"🕐 {log['timestamp']} - {log['language']}"):
                 st.code(log['code'], language=log['language'])
                 st.markdown(f"**Flowchart:** [View SVG]({log['svg_url']})")
                 st.metric("Functions", log['analysis']['function_count'])
