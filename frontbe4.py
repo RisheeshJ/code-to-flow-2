@@ -27,10 +27,10 @@ if 'analysis' not in st.session_state:
     st.session_state.analysis = None
 if 'status' not in st.session_state:
     st.session_state.status = None
-if 'last_uploaded_file' not in st.session_state:
-    st.session_state.last_uploaded_file = None
-if 'current_code' not in st.session_state:
-    st.session_state.current_code = ""
+if 'uploaded_code' not in st.session_state:
+    st.session_state.uploaded_code = ""
+if 'file_name' not in st.session_state:
+    st.session_state.file_name = None
 
 # ============================================
 # API FUNCTIONS
@@ -208,51 +208,39 @@ with col1:
     uploaded_file = st.file_uploader(
         "Choose a file",
         type=['py', 'js', 'c', 'txt', 'ts'],
-        help="Upload a Python, JavaScript, C, TypeScript, or text file containing your code",
-        key="file_uploader"
+        help="Upload a Python, JavaScript, C, TypeScript, or text file containing your code"
     )
     
-    # Handle file upload
+    # Handle file upload and read content
     if uploaded_file is not None:
         try:
-            # Read file content directly
+            # Read file content
             bytes_data = uploaded_file.getvalue()
-            code_text = bytes_data.decode('utf-8')
-            
-            # Only update if it's a different file
-            file_id = f"{uploaded_file.name}_{len(code_text)}"
-            if st.session_state.get('last_uploaded_file') != file_id:
-                st.session_state.current_code = code_text
-                st.session_state.last_uploaded_file = file_id
-                st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
-        except UnicodeDecodeError:
-            # Try different encodings if UTF-8 fails
             try:
-                code_text = bytes_data.decode('latin-1')
-                file_id = f"{uploaded_file.name}_{len(code_text)}"
-                if st.session_state.get('last_uploaded_file') != file_id:
-                    st.session_state.current_code = code_text
-                    st.session_state.last_uploaded_file = file_id
-                    st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
-            except Exception as e:
-                st.error(f"❌ Error reading file: {str(e)}")
+                file_content = bytes_data.decode('utf-8')
+            except UnicodeDecodeError:
+                file_content = bytes_data.decode('latin-1')
+            
+            # Store in session state
+            st.session_state.uploaded_code = file_content
+            st.session_state.file_name = uploaded_file.name
+            
+            st.success(f"✅ Loaded '{uploaded_file.name}' ({len(file_content.splitlines())} lines)")
+            
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
+            st.session_state.uploaded_code = ""
+            st.session_state.file_name = None
     
-    # Code input text area - ALWAYS VISIBLE
+    # Code input text area - ALWAYS uses uploaded_code as value
     st.markdown("**Enter or edit your code below:**")
     code_input = st.text_area(
         "Code Editor",
-        value=st.session_state.current_code,
+        value=st.session_state.uploaded_code,
         height=400,
         placeholder="Paste your code here or upload a file above...",
-        key="code_area",
-        label_visibility="collapsed"
+        key="code_area"
     )
-    
-    # Update session state when user types
-    if code_input != st.session_state.current_code:
-        st.session_state.current_code = code_input
     
     # Language selection
     language = st.selectbox(
@@ -279,16 +267,15 @@ with col1:
         )
     
     if clear_btn:
+        # Clear all session state
         st.session_state.session_id = None
         st.session_state.flowchart_generated = False
         st.session_state.svg_url = None
         st.session_state.mermaid_code = None
         st.session_state.analysis = None
         st.session_state.status = None
-        st.session_state.current_code = ""
-        st.session_state.last_uploaded_file = None
-        if 'example_code' in st.session_state:
-            del st.session_state.example_code
+        st.session_state.uploaded_code = ""
+        st.session_state.file_name = None
         st.rerun()
     
     # Processing logic
@@ -389,13 +376,13 @@ with col2:
             with st.expander("📄 View Mermaid Code"):
                 st.code(st.session_state.mermaid_code, language="markdown")
                 
-                if st.button("📥 Download Mermaid Code", key="download_mermaid"):
-                    st.download_button(
-                        label="💾 Download .mmd file",
-                        data=st.session_state.mermaid_code,
-                        file_name=f"flowchart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mmd",
-                        mime="text/plain"
-                    )
+                st.download_button(
+                    label="💾 Download .mmd file",
+                    data=st.session_state.mermaid_code,
+                    file_name=f"flowchart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mmd",
+                    mime="text/plain",
+                    key="download_mermaid_btn"
+                )
             
             # Status log accordion
             if st.session_state.status:
@@ -414,6 +401,7 @@ with col2:
         st.markdown("""
         - 📁 **File Upload Support** - Upload .py, .js, .c, .txt, .ts files
         - 📝 **Direct Code Input** - Paste or type code directly
+        - ✏️ **Edit Uploaded Files** - Modify uploaded code before generation
         - 🔍 **Smart Code Analysis** - Detects functions, loops, and conditionals
         - 🎯 **Multi-Language Support** - Python, JavaScript, C, TypeScript
         - 🧩 **Complexity Detection** - Analyzes code complexity
