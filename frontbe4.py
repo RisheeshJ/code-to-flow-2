@@ -203,8 +203,8 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.markdown("### 📝 Code Input")
     
-    # FILE UPLOAD - Completely independent
-    st.markdown("**Upload a code file:**")
+    # File upload section
+    st.markdown("**Upload a code file (optional):**")
     uploaded_file = st.file_uploader(
         "Choose a file",
         type=['py', 'js', 'c', 'txt', 'ts'],
@@ -212,57 +212,72 @@ with col1:
         key="file_uploader"
     )
     
-    # Handle file upload independently
+    # Handle file upload
     if uploaded_file is not None:
         try:
+            # Read file content directly
             bytes_data = uploaded_file.getvalue()
-            # Try UTF-8 first, fallback to latin-1
-            try:
-                code_from_file = bytes_data.decode('utf-8')
-            except UnicodeDecodeError:
-                code_from_file = bytes_data.decode('latin-1')
+            code_text = bytes_data.decode('utf-8')
             
-            # Check if this is a new file (different from last uploaded)
-            file_id = f"{uploaded_file.name}_{len(code_from_file)}"
+            # Only update if it's a different file
+            file_id = f"{uploaded_file.name}_{len(code_text)}"
             if st.session_state.get('last_uploaded_file') != file_id:
-                st.session_state.current_code = code_from_file
+                st.session_state.current_code = code_text
                 st.session_state.last_uploaded_file = file_id
-                st.success(f"✅ Loaded {len(code_from_file.splitlines())} lines from '{uploaded_file.name}'")
+                st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
+        except UnicodeDecodeError:
+            # Try different encodings if UTF-8 fails
+            try:
+                code_text = bytes_data.decode('latin-1')
+                file_id = f"{uploaded_file.name}_{len(code_text)}"
+                if st.session_state.get('last_uploaded_file') != file_id:
+                    st.session_state.current_code = code_text
+                    st.session_state.last_uploaded_file = file_id
+                    st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
+            except Exception as e:
+                st.error(f"❌ Error reading file: {str(e)}")
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
     
-    # CODE TEXT AREA - Always visible, completely independent
-    st.markdown("**Or paste your code directly:**")
+    # Code input text area - ALWAYS VISIBLE
+    st.markdown("**Enter or edit your code below:**")
     code_input = st.text_area(
         "Code Editor",
         value=st.session_state.current_code,
         height=400,
-        placeholder="Enter your code here...",
+        placeholder="Paste your code here or upload a file above...",
         key="code_area",
         label_visibility="collapsed"
     )
     
-    # Update session state only when text area changes
+    # Update session state when user types
     if code_input != st.session_state.current_code:
         st.session_state.current_code = code_input
     
     # Language selection
     language = st.selectbox(
         "Select Language:",
-        options=["auto", "python", "javascript", "c"],
+        options=["auto", "python", "javascript", "c", "typescript"],
         index=0,
         help="Choose 'auto' for automatic detection"
     )
     
-    # Generate / Clear buttons
+    # Generate button
     st.markdown("---")
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        generate_btn = st.button("🚀 Generate Flowchart", type="primary")
-    with col_btn2:
-        clear_btn = st.button("🗑️ Clear All")
     
-    # Clear action
+    col_btn1, col_btn2 = st.columns(2)
+    
+    with col_btn1:
+        generate_btn = st.button(
+            "🚀 Generate Flowchart",
+            type="primary"
+        )
+    
+    with col_btn2:
+        clear_btn = st.button(
+            "🗑️ Clear All"
+        )
+    
     if clear_btn:
         st.session_state.session_id = None
         st.session_state.flowchart_generated = False
@@ -276,25 +291,28 @@ with col1:
             del st.session_state.example_code
         st.rerun()
     
-    # Processing logic for Generate button
+    # Processing logic
     if generate_btn:
-        # Use whatever code is currently in session state (from file OR manual input)
-        if not st.session_state.current_code.strip():
+        if not code_input.strip():
             st.error("❌ Please enter some code or upload a file!")
         else:
             with st.spinner("⏳ Processing..."):
+                # Step 1: Submit code
                 progress_text = st.empty()
                 progress_text.info("📤 Step 1/3: Submitting code...")
                 
-                result = submit_code(st.session_state.current_code)
+                result = submit_code(code_input)
                 if result and result.get('success'):
                     st.session_state.session_id = result['session_id']
                     
+                    # Step 2: Set language
                     progress_text.info("🔧 Step 2/3: Setting language...")
                     lang_result = set_language(st.session_state.session_id, language)
                     
                     if lang_result and lang_result.get('success'):
+                        # Step 3: Generate flowchart
                         progress_text.info("🎨 Step 3/3: Generating flowchart...")
+                        
                         flowchart_result = generate_flowchart(st.session_state.session_id)
                         
                         if flowchart_result and flowchart_result.get('success'):
@@ -312,7 +330,6 @@ with col1:
                         progress_text.error("❌ Failed to set language")
                 else:
                     progress_text.error("❌ Failed to submit code")
-
 
 # Right column - Output
 with col2:
@@ -396,8 +413,9 @@ with col2:
         st.markdown("### ✨ Features")
         st.markdown("""
         - 📁 **File Upload Support** - Upload .py, .js, .c, .txt, .ts files
+        - 📝 **Direct Code Input** - Paste or type code directly
         - 🔍 **Smart Code Analysis** - Detects functions, loops, and conditionals
-        - 🎯 **Multi-Language Support** - Python, JavaScript, C
+        - 🎯 **Multi-Language Support** - Python, JavaScript, C, TypeScript
         - 🧩 **Complexity Detection** - Analyzes code complexity
         - 📊 **Visual Flowcharts** - Beautiful Mermaid diagrams
         - 🚀 **Fast Processing** - Powered by LLM + Tree-sitter
