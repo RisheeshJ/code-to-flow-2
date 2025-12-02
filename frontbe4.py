@@ -168,15 +168,15 @@ if not api_healthy:
     st.stop()
 
 # Success indicator
-with st.sidebar:
-    st.markdown("---")
+# with st.sidebar:
+#     st.markdown("---")
     
-    if st.button("📋 View Logs", use_container_width=True):
-        logs_data = get_logs()
-        if logs_data and logs_data.get('success'):
-            st.session_state.show_logs = True
-        else:
-            st.error("No logs found")
+#     if st.button("📋 View Logs", use_container_width=True):
+#         logs_data = get_logs()
+#         if logs_data and logs_data.get('success'):
+#             st.session_state.show_logs = True
+#         else:
+#             st.error("No logs found")
     
     
     # Info section
