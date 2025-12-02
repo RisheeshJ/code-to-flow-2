@@ -234,14 +234,14 @@ with col1:
                 st.session_state.current_code = code_text
                 st.session_state.last_uploaded_file = file_id
                 st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
+                st.rerun()
     
     # --- Always show the code text area and controls (whether a file was uploaded or not) ---
     code_input = st.text_area(
         "Or paste your code directly:",
         value=st.session_state.current_code,
         height=400,
-        placeholder="Enter your code here...",
-        key="code_area"
+        placeholder="Enter your code here..."
     )
     
     # Update session state when user types
@@ -412,7 +412,7 @@ if st.session_state.get('show_logs', False):
     logs_data = get_logs()
     if logs_data and logs_data.get('logs'):
         for i, log in enumerate(logs_data['logs']):
-            with st.expander(f"🕒 {log['timestamp']} - {log['language']}"):
+            with st.expander(f"🕐 {log['timestamp']} - {log['language']}"):
                 st.code(log['code'], language=log['language'])
                 st.markdown(f"**Flowchart:** [View SVG]({log['svg_url']})")
                 st.metric("Functions", log['analysis']['function_count'])
