@@ -27,10 +27,8 @@ if 'analysis' not in st.session_state:
     st.session_state.analysis = None
 if 'status' not in st.session_state:
     st.session_state.status = None
-if 'uploaded_code' not in st.session_state:
-    st.session_state.uploaded_code = ""
-if 'file_name' not in st.session_state:
-    st.session_state.file_name = None
+if 'last_uploaded_file' not in st.session_state:
+    st.session_state.last_uploaded_file = None
 
 # ============================================
 # API FUNCTIONS
@@ -204,119 +202,134 @@ with col1:
     st.markdown("### 📝 Code Input")
     
     # File upload section
-    st.markdown("**Upload a code file (optional):**")
+    # File upload section
+    st.markdown("**Paste your code here or upload your code file:**")
     uploaded_file = st.file_uploader(
-        "Choose a file",
+        "Upload a code file",
         type=['py', 'js', 'c', 'txt', 'ts'],
-        help="Upload a Python, JavaScript, C, TypeScript, or text file containing your code"
+        help="Upload a Python, JavaScript, C, or text file containing your code"
     )
     
-    # Handle file upload and read content
+    # Initialize session state for code
+    if 'current_code' not in st.session_state:
+        st.session_state.current_code = ""
+    
+    # If file is uploaded, send to API to read
+    # If file is uploaded, read it directly in Streamlit
     if uploaded_file is not None:
         try:
-            # Read file content
+            # Read file content directly
             bytes_data = uploaded_file.getvalue()
+            code_text = bytes_data.decode('utf-8')
+            
+            # Only update if it's a different file
+            file_id = f"{uploaded_file.name}_{len(code_text)}"
+            if st.session_state.get('last_uploaded_file') != file_id:
+                st.session_state.current_code = code_text
+                st.session_state.last_uploaded_file = file_id
+                st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
+        except UnicodeDecodeError:
+            # Try different encodings if UTF-8 fails
             try:
-                file_content = bytes_data.decode('utf-8')
-            except UnicodeDecodeError:
-                file_content = bytes_data.decode('latin-1')
-            
-            # Store in session state
-            st.session_state.uploaded_code = file_content
-            st.session_state.file_name = uploaded_file.name
-            
-            st.success(f"✅ Loaded '{uploaded_file.name}' ({len(file_content.splitlines())} lines)")
-            
+                code_text = bytes_data.decode('latin-1')
+                file_id = f"{uploaded_file.name}_{len(code_text)}"
+                if st.session_state.get('last_uploaded_file') != file_id:
+                    st.session_state.current_code = code_text
+                    st.session_state.last_uploaded_file = file_id
+                    st.success(f"✅ Loaded {len(code_text.splitlines())} lines from '{uploaded_file.name}'")
+            except Exception as e:
+                st.error(f"❌ Error reading file: {str(e)}")
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
-            st.session_state.uploaded_code = ""
-            st.session_state.file_name = None
-    
-    # Code input text area - ALWAYS uses uploaded_code as value
-    st.markdown("**Enter or edit your code below:**")
-    code_input = st.text_area(
-        "Code Editor",
-        value=st.session_state.uploaded_code,
-        height=400,
-        placeholder="Paste your code here or upload a file above...",
-        key="code_area"
-    )
-    
-    # Language selection
-    language = st.selectbox(
-        "Select Language:",
-        options=["auto", "python", "javascript", "c", "typescript"],
-        index=0,
-        help="Choose 'auto' for automatic detection"
-    )
-    
-    # Generate button
-    st.markdown("---")
-    
-    col_btn1, col_btn2 = st.columns(2)
-    
-    with col_btn1:
-        generate_btn = st.button(
-            "🚀 Generate Flowchart",
-            type="primary"
+        
+        # Code input
+        code_input = st.text_area(
+            "Or paste your code directly:",
+            value=st.session_state.current_code,
+            height=400,
+            placeholder="Enter your code here...",
+            key="code_area"
         )
-    
-    with col_btn2:
-        clear_btn = st.button(
-            "🗑️ Clear All"
+        
+        # Update session state when user types
+        if code_input != st.session_state.current_code:
+            st.session_state.current_code = code_input
+        
+        # Language selection
+        language = st.selectbox(
+            "Select Language:",
+            options=["auto", "python", "javascript", "c"],
+            index=0,
+            help="Choose 'auto' for automatic detection"
         )
-    
-    if clear_btn:
-        # Clear all session state
-        st.session_state.session_id = None
-        st.session_state.flowchart_generated = False
-        st.session_state.svg_url = None
-        st.session_state.mermaid_code = None
-        st.session_state.analysis = None
-        st.session_state.status = None
-        st.session_state.uploaded_code = ""
-        st.session_state.file_name = None
-        st.rerun()
-    
-    # Processing logic
-    if generate_btn:
-        if not code_input.strip():
-            st.error("❌ Please enter some code or upload a file!")
-        else:
-            with st.spinner("⏳ Processing..."):
-                # Step 1: Submit code
-                progress_text = st.empty()
-                progress_text.info("📤 Step 1/3: Submitting code...")
-                
-                result = submit_code(code_input)
-                if result and result.get('success'):
-                    st.session_state.session_id = result['session_id']
+        
+        # Generate button
+        st.markdown("---")
+        
+        col_btn1, col_btn2 = st.columns(2)
+        
+        with col_btn1:
+            generate_btn = st.button(
+                "🚀 Generate Flowchart",
+                type="primary"
+            )
+        
+        with col_btn2:
+            clear_btn = st.button(
+                "🗑️ Clear All"
+            )
+        if clear_btn:
+            st.session_state.session_id = None
+            st.session_state.flowchart_generated = False
+            st.session_state.svg_url = None
+            st.session_state.mermaid_code = None
+            st.session_state.analysis = None
+            st.session_state.status = None
+            st.session_state.current_code = ""
+            st.session_state.last_uploaded_file = None
+            if 'example_code' in st.session_state:
+                del st.session_state.example_code
+            st.rerun()
+        
+        # Processing logic
+        if generate_btn:
+            if not code_input.strip():
+                st.error("❌ Please enter some code or upload a file!")
+            else:
+                with st.spinner("⏳ Processing..."):
+                    # Step 1: Submit code
+                    progress_text = st.empty()
+                    progress_text.info("📤 Step 1/3: Submitting code...")
                     
-                    # Step 2: Set language
-                    progress_text.info("🔧 Step 2/3: Setting language...")
-                    lang_result = set_language(st.session_state.session_id, language)
-                    
-                    if lang_result and lang_result.get('success'):
-                        # Step 3: Generate flowchart
-                        progress_text.info("🎨 Step 3/3: Generating flowchart...")
+                    result = submit_code(code_input)
+                    if result and result.get('success'):
+                        st.session_state.session_id = result['session_id']
                         
-                        flowchart_result = generate_flowchart(st.session_state.session_id)
+                        # Step 2: Set language
+                        progress_text.info("🔧 Step 2/3: Setting language...")
+                        lang_result = set_language(st.session_state.session_id, language)
                         
-                        if flowchart_result and flowchart_result.get('success'):
-                            st.session_state.flowchart_generated = True
-                            st.session_state.svg_url = flowchart_result['svg_url']
-                            st.session_state.mermaid_code = flowchart_result['mermaid_code']
-                            st.session_state.analysis = flowchart_result['analysis']
-                            st.session_state.status = flowchart_result['status']
+                        if lang_result and lang_result.get('success'):
+                            # Step 3: Generate flowchart
+                            progress_text.info("🎨 Step 3/3: Generating flowchart...")
                             
-                            progress_text.success("✅ Flowchart generated successfully!")
-                            st.rerun()
+                            flowchart_result = generate_flowchart(st.session_state.session_id)
+                            
+                            if flowchart_result and flowchart_result.get('success'):
+                                st.session_state.flowchart_generated = True
+                                st.session_state.svg_url = flowchart_result['svg_url']
+                                st.session_state.mermaid_code = flowchart_result['mermaid_code']
+                                st.session_state.analysis = flowchart_result['analysis']
+                                st.session_state.status = flowchart_result['status']
+                                
+                                progress_text.success("✅ Flowchart generated successfully!")
+                                st.rerun()
+                            else:
+                                progress_text.error("❌ Failed to generate flowchart")
                         else:
-                            progress_text.error("❌ Failed to generate flowchart")
+                            progress_text.error("❌ Failed to set language")
                     else:
-                        progress_text.error("❌ Failed to set language")
-                else:
-                    progress_text.error("❌ Failed to submit code")
+                        progress_text.error("❌ Failed to submit code")
 
 # Right column - Output
 with col2:
@@ -376,13 +389,13 @@ with col2:
             with st.expander("📄 View Mermaid Code"):
                 st.code(st.session_state.mermaid_code, language="markdown")
                 
-                st.download_button(
-                    label="💾 Download .mmd file",
-                    data=st.session_state.mermaid_code,
-                    file_name=f"flowchart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mmd",
-                    mime="text/plain",
-                    key="download_mermaid_btn"
-                )
+                if st.button("📥 Download Mermaid Code", key="download_mermaid"):
+                    st.download_button(
+                        label="💾 Download .mmd file",
+                        data=st.session_state.mermaid_code,
+                        file_name=f"flowchart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mmd",
+                        mime="text/plain"
+                    )
             
             # Status log accordion
             if st.session_state.status:
@@ -399,11 +412,9 @@ with col2:
         st.markdown("---")
         st.markdown("### ✨ Features")
         st.markdown("""
-        - 📁 **File Upload Support** - Upload .py, .js, .c, .txt, .ts files
-        - 📝 **Direct Code Input** - Paste or type code directly
-        - ✏️ **Edit Uploaded Files** - Modify uploaded code before generation
+        - 📁 **File Upload Support** - Upload .py, .js, .c, .txt,.ts files
         - 🔍 **Smart Code Analysis** - Detects functions, loops, and conditionals
-        - 🎯 **Multi-Language Support** - Python, JavaScript, C, TypeScript
+        - 🎯 **Multi-Language Support** - Python, JavaScript, C.
         - 🧩 **Complexity Detection** - Analyzes code complexity
         - 📊 **Visual Flowcharts** - Beautiful Mermaid diagrams
         - 🚀 **Fast Processing** - Powered by LLM + Tree-sitter
@@ -417,7 +428,7 @@ if st.session_state.get('show_logs', False):
     logs_data = get_logs()
     if logs_data and logs_data.get('logs'):
         for i, log in enumerate(logs_data['logs']):
-            with st.expander(f"🕐 {log['timestamp']} - {log['language']}"):
+            with st.expander(f"🕒 {log['timestamp']} - {log['language']}"):
                 st.code(log['code'], language=log['language'])
                 st.markdown(f"**Flowchart:** [View SVG]({log['svg_url']})")
                 st.metric("Functions", log['analysis']['function_count'])
