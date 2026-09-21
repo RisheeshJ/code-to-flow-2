@@ -20,7 +20,7 @@ key = os.getenv("GROQ_API_KEY")
 # CONFIG
 # =====================
 llm = ChatGroq(
-    model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
+    model=os.getenv("GROQ_MODEL", "moonshotai/kimi-k2-instruct"),
     api_key=key,
     temperature=0.2
 )
